@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Scrolling Text GIF Generator</title>
+  </head>
+  <body>
+    <div id="app">
+      <h1>Scrolling Text GIF Generator</h1>
+      <div class="controls">
+        <div class="input-group">
+          <label for="text-input">Text:</label>
+          <input type="text" id="text-input" placeholder="Enter your text" value="Hello World!">
+        </div>
+        <div class="input-group">
+          <label for="color-input">Color:</label>
+          <input type="color" id="color-input" value="#ffffff">
+        </div>
+        <div class="input-group">
+          <label for="font-input">Font:</label>
+          <select id="font-input">
+            <option value="Arial">Arial</option>
+            <option value="Helvetica">Helvetica</option>
+            <option value="Times New Roman">Times New Roman</option>
+            <option value="Courier New">Courier New</option>
+            <option value="Verdana">Verdana</option>
+            <option value="Georgia">Georgia</option>
+          </select>
+        </div>
+        <button id="generate-btn">Generate GIF</button>
+      </div>
+      <div class="preview">
+        <canvas id="preview-canvas" width="128" height="128"></canvas>
+        <div id="download-link"></div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
