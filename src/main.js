@@ -71,10 +71,16 @@ function generateGIF() {
   const textWidth = measureCtx.measureText(text).width;
   const totalWidth = textWidth + canvasSize;
   let frames = Math.ceil(totalWidth / pixelsPerFrame);
+  let adjustedPixelsPerFrame = pixelsPerFrame;
   
-  // Cap frames to 50 in Slack mode to reduce file size
+  // Cap frames to 50 in Slack mode and adjust speed to ensure full text scroll
   if (slackMode) {
+    const originalFrames = frames;
     frames = Math.min(frames, 50);
+    if (originalFrames > 50) {
+      // Increase speed to cover the same distance in fewer frames
+      adjustedPixelsPerFrame = Math.ceil(totalWidth / 50);
+    }
   }
 
   for (let i = 0; i < frames; i++) {
@@ -89,7 +95,7 @@ function generateGIF() {
     frameCtx.imageSmoothingEnabled = false;
     frameCtx.textRenderingOptimization = 'optimizeSpeed';
 
-    const offset = i * pixelsPerFrame;
+    const offset = i * adjustedPixelsPerFrame;
     const x = canvasSize - offset;
 
     // Draw stroke with round line caps to avoid artifacts
