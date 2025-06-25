@@ -105,10 +105,34 @@ button:disabled {
   gap: 1rem;
 }
 
-canvas {
+#loading-spinner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #444;
+  border-top: 4px solid #646cff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+#gif-display img {
   border: 2px solid #444;
   border-radius: 8px;
-  background: repeating-conic-gradient(#808080 0% 25%, transparent 0% 50%) 50% / 20px 20px;
+  cursor: context-menu;
+  max-width: 100%;
+  height: auto;
 }
 
 #download-link a {
@@ -139,7 +163,12 @@ canvas {
     border-color: #ddd;
   }
   
-  canvas {
+  #gif-display img {
     border-color: #ddd;
+  }
+  
+  .spinner {
+    border-color: #ddd;
+    border-top-color: #646cff;
   }
 }

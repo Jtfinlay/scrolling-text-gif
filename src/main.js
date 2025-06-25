@@ -7,76 +7,43 @@ inject();
 // Constants
 const CANVAS_SIZE = 128;
 const FONT_SIZE = 128;
-const SCROLL_SPEED = 4;
-const GIF_FRAME_DELAY = 25;
-const GIF_QUALITY = 10;
-const GIF_WORKERS = 2;
-const GENERATION_TIMEOUT = 2000;
+const PIXELS_PER_FRAME = 4;
+const FRAME_DELAY_MS = 20; // minimum of 20ms or else renderer gets confused
+const GIF_QUALITY = 0;
+const GIF_WORKERS = 10;
 const TEXT_STROKE_WIDTH = 10;
+const DEBOUNCE_DELAY = 500;
+const FILL_COLOR = '#635BFF';
+const STROKE_COLOR = '#F6F9FB';
 
-const canvas = document.getElementById('preview-canvas');
-const ctx = canvas.getContext('2d');
+const gifDisplay = document.getElementById('gif-display');
+const loadingSpinner = document.getElementById('loading-spinner');
 const textInput = document.getElementById('text-input');
 const colorInput = document.getElementById('color-input');
 const fontInput = document.getElementById('font-input');
-const generateBtn = document.getElementById('generate-btn');
-const downloadLink = document.getElementById('download-link');
+const boldInput = document.getElementById('bold-input');
 
-let animationId = null;
-let scrollOffset = 0;
+let debounceTimer = null;
+let currentGif = null;
 
-function drawScrollingText() {
-  const text = textInput.value || 'Hello World!';
-  const color = colorInput.value;
-  const font = fontInput.value;
-
-  ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
-
-  ctx.font = FONT_SIZE + 'px ' + font;
-  ctx.textAlign = 'left';
-  ctx.textBaseline = 'middle';
-
-  const textWidth = ctx.measureText(text).width;
-  const totalWidth = textWidth + CANVAS_SIZE;
-
-  const x = CANVAS_SIZE - (scrollOffset % totalWidth);
-
-  // Draw black stroke/border
-  ctx.strokeStyle = 'black';
-  ctx.lineWidth = TEXT_STROKE_WIDTH;
-  ctx.strokeText(text, x, CANVAS_SIZE / 2);
-
-  // Draw colored fill
-  ctx.fillStyle = color;
-  ctx.fillText(text, x, CANVAS_SIZE / 2);
-
-  if (x + textWidth < CANVAS_SIZE) {
-    // Draw black stroke/border for second instance
-    ctx.strokeText(text, x + totalWidth, CANVAS_SIZE / 2);
-    // Draw colored fill for second instance
-    ctx.fillText(text, x + totalWidth, CANVAS_SIZE / 2);
+function debouncedGenerateGIF() {
+  if (debounceTimer) {
+    clearTimeout(debounceTimer);
   }
 
-  scrollOffset += SCROLL_SPEED;
-}
+  loadingSpinner.style.display = 'block';
+  gifDisplay.style.display = 'none';
 
-function startPreview() {
-  if (animationId) {
-    cancelAnimationFrame(animationId);
-  }
-
-  function animate() {
-    drawScrollingText();
-    animationId = requestAnimationFrame(animate);
-  }
-
-  animate();
+  debounceTimer = setTimeout(() => {
+    generateGIF();
+  }, DEBOUNCE_DELAY);
 }
 
 function generateGIF() {
   const text = textInput.value || 'Hello World!';
-  const color = colorInput.value;
+  const color = colorInput.value || FILL_COLOR;
   const font = fontInput.value;
+  const bold = boldInput.checked;
 
   const gif = new GIF({
     workers: GIF_WORKERS,
@@ -84,64 +51,79 @@ function generateGIF() {
     width: CANVAS_SIZE,
     height: CANVAS_SIZE,
     transparent: 0x000000,
+    workerScript: '/gif.worker.js',
   });
 
-  const tempCanvas = document.createElement('canvas');
-  tempCanvas.width = CANVAS_SIZE;
-  tempCanvas.height = CANVAS_SIZE;
-  const tempCtx = tempCanvas.getContext('2d');
-
-  tempCtx.font = FONT_SIZE + 'px ' + font;
-  tempCtx.textAlign = 'left';
-  tempCtx.textBaseline = 'middle';
-
-  const textWidth = tempCtx.measureText(text).width;
+  // Get text dimensions
+  const measureCanvas = document.createElement('canvas');
+  const measureCtx = measureCanvas.getContext('2d');
+  measureCtx.font = (bold ? 'bold ' : '') + FONT_SIZE + 'px ' + font;
+  const textWidth = measureCtx.measureText(text).width;
   const totalWidth = textWidth + CANVAS_SIZE;
-  const frames = Math.ceil(totalWidth / SCROLL_SPEED);
+  const frames = Math.ceil(totalWidth / PIXELS_PER_FRAME);
 
   for (let i = 0; i < frames; i++) {
-    tempCtx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    const frameCanvas = document.createElement('canvas');
+    frameCanvas.width = CANVAS_SIZE;
+    frameCanvas.height = CANVAS_SIZE;
+    const frameCtx = frameCanvas.getContext('2d');
 
-    const offset = i * SCROLL_SPEED;
-    const x = CANVAS_SIZE - (offset % totalWidth);
+    frameCtx.font = (bold ? 'bold ' : '') + FONT_SIZE + 'px ' + font;
+    frameCtx.textAlign = 'left';
+    frameCtx.textBaseline = 'middle';
 
-    // Draw black stroke/border
-    tempCtx.strokeStyle = 'black';
-    tempCtx.lineWidth = TEXT_STROKE_WIDTH;
-    tempCtx.strokeText(text, x, CANVAS_SIZE / 2);
+    const offset = i * PIXELS_PER_FRAME;
+    const x = CANVAS_SIZE - offset;
+
+    frameCtx.strokeStyle = STROKE_COLOR;
+    frameCtx.lineWidth = TEXT_STROKE_WIDTH;
+    frameCtx.strokeText(text, x, CANVAS_SIZE / 2);
 
     // Draw colored fill
-    tempCtx.fillStyle = color;
-    tempCtx.fillText(text, x, CANVAS_SIZE / 2);
+    frameCtx.fillStyle = color;
+    frameCtx.miterLimit = 2;
+    frameCtx.fillText(text, x, CANVAS_SIZE / 2);
 
-    if (x + textWidth < CANVAS_SIZE) {
-      // Draw black stroke/border for second instance
-      tempCtx.strokeText(text, x + totalWidth, CANVAS_SIZE / 2);
-      // Draw colored fill for second instance
-      tempCtx.fillText(text, x + totalWidth, CANVAS_SIZE / 2);
-    }
-
-    gif.addFrame(tempCanvas, { delay: GIF_FRAME_DELAY });
+    gif.addFrame(frameCanvas, { delay: FRAME_DELAY_MS });
   }
 
   gif.on('finished', function (blob) {
-    const url = URL.createObjectURL(blob);
-    downloadLink.innerHTML = `<a href="${url}" download="scrolling-text.gif">Download GIF</a>`;
+    if (currentGif) {
+      URL.revokeObjectURL(currentGif);
+    }
+
+    currentGif = URL.createObjectURL(blob);
+
+    const img = document.createElement('img');
+    img.src = currentGif;
+    img.alt = 'Generated scrolling text GIF';
+    img.addEventListener('contextmenu', e => {
+      e.preventDefault();
+      const link = document.createElement('a');
+      link.href = currentGif;
+      link.download = 'scrolling-text.gif';
+      link.click();
+    });
+
+    gifDisplay.innerHTML = '';
+    gifDisplay.appendChild(img);
+    gifDisplay.style.display = 'block';
+    loadingSpinner.style.display = 'none';
+  });
+
+  gif.on('error', function (error) {
+    console.error('GIF generation error:', error);
+    loadingSpinner.style.display = 'none';
+    gifDisplay.innerHTML = '<p>Error generating GIF</p>';
+    gifDisplay.style.display = 'block';
   });
 
   gif.render();
-  generateBtn.textContent = 'Generating...';
-  generateBtn.disabled = true;
-
-  setTimeout(() => {
-    generateBtn.textContent = 'Generate GIF';
-    generateBtn.disabled = false;
-  }, GENERATION_TIMEOUT);
 }
 
-textInput.addEventListener('input', startPreview);
-colorInput.addEventListener('input', startPreview);
-fontInput.addEventListener('change', startPreview);
-generateBtn.addEventListener('click', generateGIF);
+textInput.addEventListener('input', debouncedGenerateGIF);
+colorInput.addEventListener('input', debouncedGenerateGIF);
+fontInput.addEventListener('change', debouncedGenerateGIF);
+boldInput.addEventListener('change', debouncedGenerateGIF);
 
-startPreview();
+debouncedGenerateGIF();
