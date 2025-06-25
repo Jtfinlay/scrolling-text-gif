@@ -48,12 +48,12 @@ function generateGIF() {
   const slackMode = slackInput.checked;
 
   // Slack mode optimizations
-  const canvasSize = slackMode ? 96 : CANVAS_SIZE;
-  const fontSize = slackMode ? 96 : FONT_SIZE;
-  const pixelsPerFrame = slackMode ? 6 : PIXELS_PER_FRAME;
-  const frameDelay = slackMode ? 30 : FRAME_DELAY_MS;
-  const quality = slackMode ? 15 : GIF_QUALITY;
-  const strokeWidth = slackMode ? 8 : TEXT_STROKE_WIDTH;
+  const canvasSize = slackMode ? 64 : CANVAS_SIZE;
+  const fontSize = slackMode ? 64 : FONT_SIZE;
+  const pixelsPerFrame = slackMode ? 8 : PIXELS_PER_FRAME;
+  const frameDelay = slackMode ? 40 : FRAME_DELAY_MS;
+  const quality = slackMode ? 20 : GIF_QUALITY;
+  const strokeWidth = slackMode ? 5 : TEXT_STROKE_WIDTH;
 
   const gif = new GIF({
     workers: GIF_WORKERS,
@@ -81,17 +81,21 @@ function generateGIF() {
     frameCtx.font = (bold ? 'bold ' : '') + fontSize + 'px ' + font;
     frameCtx.textAlign = 'left';
     frameCtx.textBaseline = 'middle';
+    frameCtx.imageSmoothingEnabled = false;
+    frameCtx.textRenderingOptimization = 'optimizeSpeed';
 
     const offset = i * pixelsPerFrame;
     const x = canvasSize - offset;
 
+    // Draw stroke with round line caps to avoid artifacts
     frameCtx.strokeStyle = STROKE_COLOR;
     frameCtx.lineWidth = strokeWidth;
+    frameCtx.lineJoin = 'round';
+    frameCtx.lineCap = 'round';
     frameCtx.strokeText(text, x, canvasSize / 2);
 
     // Draw colored fill
     frameCtx.fillStyle = color;
-    frameCtx.miterLimit = 2;
     frameCtx.fillText(text, x, canvasSize / 2);
 
     gif.addFrame(frameCanvas, { delay: frameDelay });
@@ -111,7 +115,8 @@ function generateGIF() {
       e.preventDefault();
       const link = document.createElement('a');
       link.href = currentGif;
-      const fileName = text.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase() + '.gif';
+      const fileName =
+        text.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase() + '.gif';
       link.download = fileName;
       link.click();
     });
