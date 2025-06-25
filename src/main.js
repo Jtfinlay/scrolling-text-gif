@@ -9,7 +9,7 @@ const CANVAS_SIZE = 128;
 const FONT_SIZE = 128;
 const PIXELS_PER_FRAME = 4;
 const FRAME_DELAY_MS = 20; // minimum of 20ms or else renderer gets confused
-const GIF_QUALITY = 0;
+const GIF_QUALITY = 10;
 const GIF_WORKERS = 10;
 const TEXT_STROKE_WIDTH = 10;
 const DEBOUNCE_DELAY = 500;
@@ -22,6 +22,7 @@ const textInput = document.getElementById('text-input');
 const colorInput = document.getElementById('color-input');
 const fontInput = document.getElementById('font-input');
 const boldInput = document.getElementById('bold-input');
+const slackInput = document.getElementById('slack-input');
 
 let debounceTimer = null;
 let currentGif = null;
@@ -44,12 +45,21 @@ function generateGIF() {
   const color = colorInput.value || FILL_COLOR;
   const font = fontInput.value;
   const bold = boldInput.checked;
+  const slackMode = slackInput.checked;
+
+  // Slack mode optimizations
+  const canvasSize = slackMode ? 96 : CANVAS_SIZE;
+  const fontSize = slackMode ? 96 : FONT_SIZE;
+  const pixelsPerFrame = slackMode ? 6 : PIXELS_PER_FRAME;
+  const frameDelay = slackMode ? 30 : FRAME_DELAY_MS;
+  const quality = slackMode ? 15 : GIF_QUALITY;
+  const strokeWidth = slackMode ? 8 : TEXT_STROKE_WIDTH;
 
   const gif = new GIF({
     workers: GIF_WORKERS,
-    quality: GIF_QUALITY,
-    width: CANVAS_SIZE,
-    height: CANVAS_SIZE,
+    quality: quality,
+    width: canvasSize,
+    height: canvasSize,
     transparent: 0x000000,
     workerScript: '/gif.worker.js',
   });
@@ -57,34 +67,34 @@ function generateGIF() {
   // Get text dimensions
   const measureCanvas = document.createElement('canvas');
   const measureCtx = measureCanvas.getContext('2d');
-  measureCtx.font = (bold ? 'bold ' : '') + FONT_SIZE + 'px ' + font;
+  measureCtx.font = (bold ? 'bold ' : '') + fontSize + 'px ' + font;
   const textWidth = measureCtx.measureText(text).width;
-  const totalWidth = textWidth + CANVAS_SIZE;
-  const frames = Math.ceil(totalWidth / PIXELS_PER_FRAME);
+  const totalWidth = textWidth + canvasSize;
+  const frames = Math.ceil(totalWidth / pixelsPerFrame);
 
   for (let i = 0; i < frames; i++) {
     const frameCanvas = document.createElement('canvas');
-    frameCanvas.width = CANVAS_SIZE;
-    frameCanvas.height = CANVAS_SIZE;
+    frameCanvas.width = canvasSize;
+    frameCanvas.height = canvasSize;
     const frameCtx = frameCanvas.getContext('2d');
 
-    frameCtx.font = (bold ? 'bold ' : '') + FONT_SIZE + 'px ' + font;
+    frameCtx.font = (bold ? 'bold ' : '') + fontSize + 'px ' + font;
     frameCtx.textAlign = 'left';
     frameCtx.textBaseline = 'middle';
 
-    const offset = i * PIXELS_PER_FRAME;
-    const x = CANVAS_SIZE - offset;
+    const offset = i * pixelsPerFrame;
+    const x = canvasSize - offset;
 
     frameCtx.strokeStyle = STROKE_COLOR;
-    frameCtx.lineWidth = TEXT_STROKE_WIDTH;
-    frameCtx.strokeText(text, x, CANVAS_SIZE / 2);
+    frameCtx.lineWidth = strokeWidth;
+    frameCtx.strokeText(text, x, canvasSize / 2);
 
     // Draw colored fill
     frameCtx.fillStyle = color;
     frameCtx.miterLimit = 2;
-    frameCtx.fillText(text, x, CANVAS_SIZE / 2);
+    frameCtx.fillText(text, x, canvasSize / 2);
 
-    gif.addFrame(frameCanvas, { delay: FRAME_DELAY_MS });
+    gif.addFrame(frameCanvas, { delay: frameDelay });
   }
 
   gif.on('finished', function (blob) {
@@ -101,7 +111,8 @@ function generateGIF() {
       e.preventDefault();
       const link = document.createElement('a');
       link.href = currentGif;
-      link.download = 'scrolling-text.gif';
+      const fileName = text.replace(/[^a-zA-Z0-9]/g, '-').toLowerCase() + '.gif';
+      link.download = fileName;
       link.click();
     });
 
@@ -125,5 +136,6 @@ textInput.addEventListener('input', debouncedGenerateGIF);
 colorInput.addEventListener('input', debouncedGenerateGIF);
 fontInput.addEventListener('change', debouncedGenerateGIF);
 boldInput.addEventListener('change', debouncedGenerateGIF);
+slackInput.addEventListener('change', debouncedGenerateGIF);
 
 debouncedGenerateGIF();
