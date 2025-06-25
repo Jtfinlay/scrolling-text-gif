@@ -70,7 +70,12 @@ function generateGIF() {
   measureCtx.font = (bold ? 'bold ' : '') + fontSize + 'px ' + font;
   const textWidth = measureCtx.measureText(text).width;
   const totalWidth = textWidth + canvasSize;
-  const frames = Math.ceil(totalWidth / pixelsPerFrame);
+  let frames = Math.ceil(totalWidth / pixelsPerFrame);
+  
+  // Cap frames to 50 in Slack mode to reduce file size
+  if (slackMode) {
+    frames = Math.min(frames, 50);
+  }
 
   for (let i = 0; i < frames; i++) {
     const frameCanvas = document.createElement('canvas');
