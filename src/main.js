@@ -1,5 +1,8 @@
 import './style.css';
 import GIF from 'gif.js';
+import { inject } from '@vercel/analytics';
+
+inject();
 
 // Constants
 const CANVAS_SIZE = 128;
