@@ -22,6 +22,8 @@ const textInput = document.getElementById('text-input');
 const colorInput = document.getElementById('color-input');
 const fontInput = document.getElementById('font-input');
 const boldInput = document.getElementById('bold-input');
+const speedInput = document.getElementById('speed-input');
+const speedValue = document.getElementById('speed-value');
 const slackInput = document.getElementById('slack-input');
 
 let debounceTimer = null;
@@ -45,12 +47,13 @@ function generateGIF() {
   const color = colorInput.value || FILL_COLOR;
   const font = fontInput.value;
   const bold = boldInput.checked;
+  const speed = parseInt(speedInput.value);
   const slackMode = slackInput.checked;
 
   // Slack mode optimizations
   const canvasSize = slackMode ? 64 : CANVAS_SIZE;
   const fontSize = slackMode ? 64 : FONT_SIZE;
-  const pixelsPerFrame = slackMode ? 8 : PIXELS_PER_FRAME;
+  const pixelsPerFrame = speed;
   const frameDelay = slackMode ? 40 : FRAME_DELAY_MS;
   const quality = slackMode ? 20 : GIF_QUALITY;
   const strokeWidth = slackMode ? 5 : TEXT_STROKE_WIDTH;
@@ -152,6 +155,10 @@ textInput.addEventListener('input', debouncedGenerateGIF);
 colorInput.addEventListener('input', debouncedGenerateGIF);
 fontInput.addEventListener('change', debouncedGenerateGIF);
 boldInput.addEventListener('change', debouncedGenerateGIF);
+speedInput.addEventListener('input', (e) => {
+  speedValue.textContent = e.target.value;
+  debouncedGenerateGIF();
+});
 slackInput.addEventListener('change', debouncedGenerateGIF);
 
 debouncedGenerateGIF();
