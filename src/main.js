@@ -22,6 +22,7 @@ const textInput = document.getElementById('text-input');
 const colorInput = document.getElementById('color-input');
 const fontInput = document.getElementById('font-input');
 const boldInput = document.getElementById('bold-input');
+const continuousInput = document.getElementById('continuous-input');
 const speedInput = document.getElementById('speed-input');
 const speedValue = document.getElementById('speed-value');
 const slackInput = document.getElementById('slack-input');
@@ -47,6 +48,7 @@ function generateGIF() {
   const color = colorInput.value || FILL_COLOR;
   const font = fontInput.value;
   const bold = boldInput.checked;
+  const continuous = continuousInput.checked;
   const speed = parseInt(speedInput.value);
   const slackMode = slackInput.checked;
 
@@ -71,11 +73,16 @@ function generateGIF() {
   const measureCanvas = document.createElement('canvas');
   const measureCtx = measureCanvas.getContext('2d');
   measureCtx.font = (bold ? 'bold ' : '') + fontSize + 'px ' + font;
-  const textWidth = measureCtx.measureText(text).width;
-  const totalWidth = textWidth + canvasSize;
+
+  // For continuous mode, create triple text to ensure seamless loop
+  const displayText = continuous ? text + ' ' + text + ' ' + text : text;
+  const textWidth = measureCtx.measureText(displayText).width;
+  const singleTextWidth = measureCtx.measureText(text + ' ').width;
+  const totalWidth = continuous ? singleTextWidth : textWidth + canvasSize;
+  const initialWidthOffset = continuous ? singleTextWidth : 0;
   let frames = Math.ceil(totalWidth / pixelsPerFrame);
   let adjustedPixelsPerFrame = pixelsPerFrame;
-  
+
   // Cap frames to 50 in Slack mode and adjust speed to ensure full text scroll
   if (slackMode) {
     const originalFrames = frames;
@@ -98,7 +105,7 @@ function generateGIF() {
     frameCtx.imageSmoothingEnabled = false;
     frameCtx.textRenderingOptimization = 'optimizeSpeed';
 
-    const offset = i * adjustedPixelsPerFrame;
+    const offset = initialWidthOffset + i * adjustedPixelsPerFrame;
     const x = canvasSize - offset;
 
     // Draw stroke with round line caps to avoid artifacts
@@ -106,11 +113,11 @@ function generateGIF() {
     frameCtx.lineWidth = strokeWidth;
     frameCtx.lineJoin = 'round';
     frameCtx.lineCap = 'round';
-    frameCtx.strokeText(text, x, canvasSize / 2);
+    frameCtx.strokeText(displayText, x, canvasSize / 2);
 
     // Draw colored fill
     frameCtx.fillStyle = color;
-    frameCtx.fillText(text, x, canvasSize / 2);
+    frameCtx.fillText(displayText, x, canvasSize / 2);
 
     gif.addFrame(frameCanvas, { delay: frameDelay });
   }
@@ -155,7 +162,8 @@ textInput.addEventListener('input', debouncedGenerateGIF);
 colorInput.addEventListener('input', debouncedGenerateGIF);
 fontInput.addEventListener('change', debouncedGenerateGIF);
 boldInput.addEventListener('change', debouncedGenerateGIF);
-speedInput.addEventListener('input', (e) => {
+continuousInput.addEventListener('change', debouncedGenerateGIF);
+speedInput.addEventListener('input', e => {
   speedValue.textContent = e.target.value;
   debouncedGenerateGIF();
 });
