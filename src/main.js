@@ -49,14 +49,13 @@ function generateGIF() {
   const font = fontInput.value;
   const bold = boldInput.checked;
   const continuous = continuousInput.checked;
-  const speed = parseInt(speedInput.value);
+  const speed = parseFloat(speedInput.value);
   const slackMode = slackInput.checked;
 
   // Slack mode optimizations
   const canvasSize = slackMode ? 64 : CANVAS_SIZE;
   const fontSize = slackMode ? 64 : FONT_SIZE;
-  const pixelsPerFrame = speed;
-  const frameDelay = slackMode ? 40 : FRAME_DELAY_MS;
+  const baseFrameDelay = slackMode ? 40 : FRAME_DELAY_MS;
   const quality = slackMode ? 20 : GIF_QUALITY;
   const strokeWidth = slackMode ? 5 : TEXT_STROKE_WIDTH;
 
@@ -80,16 +79,22 @@ function generateGIF() {
   const singleTextWidth = measureCtx.measureText(text + ' ').width;
   const totalWidth = continuous ? singleTextWidth : textWidth + canvasSize;
   const initialWidthOffset = continuous ? singleTextWidth : 0;
-  let frames = Math.ceil(totalWidth / pixelsPerFrame);
-  let adjustedPixelsPerFrame = pixelsPerFrame;
+  let frames = Math.ceil(totalWidth / speed);
+  let adjustedPixelsPerFrame = speed;
+  let frameDelay = baseFrameDelay;
 
   // Cap frames to 50 in Slack mode and adjust speed to ensure full text scroll
   if (slackMode) {
     const originalFrames = frames;
     frames = Math.min(frames, 50);
     if (originalFrames > 50) {
-      // Increase speed to cover the same distance in fewer frames
-      adjustedPixelsPerFrame = Math.ceil(totalWidth / 50);
+      const minRequiredPixelsPerFrame = totalWidth / 50;
+
+      // User wants it slower than min speed allows in 50 frames
+      // Use minimum speed but extend frame delay to compensate
+      adjustedPixelsPerFrame = minRequiredPixelsPerFrame;
+      const slowdownFactor = minRequiredPixelsPerFrame / speed;
+      frameDelay = Math.floor(baseFrameDelay * slowdownFactor);
     }
   }
 
