@@ -45,12 +45,12 @@ function getSlackModeSettings(slackMode, speed) {
   }
 
   return {
-    canvasSize: 64,
-    fontSize: 64,
+    canvasSize: 96,
+    fontSize: 96,
     pixelsPerFrame: Math.max(0.1, speed * 0.3),
     frameDelay: 40,
-    quality: 20,
-    strokeWidth: 5,
+    quality: 15,
+    strokeWidth: 7,
   };
 }
 
